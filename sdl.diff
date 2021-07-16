@@ -1,0 +1,295 @@
+diff -uarN jcgo_Out/GameShll.c jcgo_Out_Patched/GameShll.c
+--- jcgo_Out/GameShll.c	2021-07-16 16:20:03.489303026 -0500
++++ jcgo_Out_Patched/GameShll.c	2021-07-16 16:19:19.608474106 -0500
+@@ -12,6 +12,126 @@
+ #include "jcgobchk.h"
+ #endif
+ 
++void get_keycodes(jchar* charCode, jint* code) {
++ switch (event.key.keysym.scancode) {
++  case SDL_SCANCODE_LEFT:
++   *code = 37;
++   *charCode = 65535;
++   break;
++  case SDL_SCANCODE_RIGHT:
++   *code = 39;
++   *charCode = 65535;
++   break;
++  case SDL_SCANCODE_UP:
++   *code = 38;
++   *charCode = 65535;
++   break;
++  case SDL_SCANCODE_DOWN:
++   *code = 40;
++   *charCode = 65535;
++   break;
++  default:
++   *charCode = event.key.keysym.sym;
++   const char* keyName = SDL_GetKeyName(event.key.keysym.sym);
++
++   if (strlen(keyName) == 1) {
++    *code = keyName[0];
++   } else {
++    *code = *charCode;
++   }
++
++   // absolutely dumb hack but i don't want to use SDL's textinput
++   if (event.key.keysym.mod & KMOD_SHIFT) {
++    if (*charCode >= 'a' && *charCode <= 'z') {
++      *charCode -= 32;
++    } else {
++     switch (*charCode) {
++      case ';':
++       *charCode = ':';
++       break;
++      case '`':
++       *charCode = '~';
++       break;
++      case '1':
++       *charCode = '!';
++       break;
++      case '2':
++       *charCode = '@';
++       break;
++      case '3':
++       *charCode = '#';
++       break;
++      case '4':
++       *charCode = '$';
++       break;
++      case '5':
++       *charCode = '%';
++       break;
++      case '6':
++       *charCode = '^';
++       break;
++      case '7':
++       *charCode = '&';
++       break;
++      case '8':
++       *charCode = '*';
++       break;
++      case '9':
++       *charCode = '(';
++       break;
++      case '0':
++       *charCode = ')';
++       break;
++      case '-':
++       *charCode = '_';
++       break;
++      case '=':
++       *charCode = '+';
++       break;
++     }
++    }
++   }
++   break;
++ }
++}
++
++void handle_sdl_events(package_GameShell This) {
++ while (SDL_PollEvent(&event)) {
++  switch (event.type) {
++   case SDL_QUIT:
++    exit(0);
++    break;
++   case SDL_KEYDOWN: {
++    jchar charCode;
++    jint code;
++    get_keycodes(&charCode, &code);
++    (package_GameShell__keyPressed__CI(This, code, charCode));
++    break;
++   }
++   case SDL_KEYUP: {
++    jchar charCode;
++    jint code;
++    get_keycodes(&charCode, &code);
++    (package_GameShell__keyReleased__I(This, code));
++    break;
++   }
++   case SDL_MOUSEMOTION:
++    (package_GameShell__mouseMoved__II(This, event.motion.x, event.motion.y));
++    break;
++   case SDL_MOUSEBUTTONDOWN: {
++    jint button = event.button.button == 3 ? 2 : 1;
++    (package_GameShell__mousePressed__III(This, event.button.x, event.button.y,
++     button));
++    break;
++   }
++   case SDL_MOUSEBUTTONUP:
++    (package_GameShell__mouseReleased__II(This, event.button.x,
++     event.button.y));
++    break;
++  }
++ }
++}
++
+ JCGO_NOSEP_INLINE void CFASTCALL
+ package_GameShell__keyPressed__CI( package_GameShell This, jint code,
+  jchar chr )
+@@ -626,6 +746,7 @@
+    while (i1 < (jint)256)
+    {
+     jint jcgo_rcvrI1;
++    handle_sdl_events(This);
+     (JCGO_CALL_NZVFUNC(This)->handleInputs__(
+      This));
+     i1+= j;
+diff -uarN jcgo_Out/KeyEvent.h jcgo_Out_Patched/KeyEvent.h
+--- jcgo_Out/KeyEvent.h	2021-07-16 16:20:03.545304070 -0500
++++ jcgo_Out_Patched/KeyEvent.h	2021-07-16 16:19:19.608474106 -0500
+@@ -2,21 +2,21 @@
+ 
+ #ifdef JCGO_116
+ 
+-#define package_KeyEvent__VK_LEFT (-(jint)12345678L)
++#define package_KeyEvent__VK_LEFT (37)
+ 
+-#define package_KeyEvent__VK_RIGHT (-(jint)12345678L)
++#define package_KeyEvent__VK_RIGHT (39)
+ 
+-#define package_KeyEvent__VK_UP (-(jint)12345678L)
++#define package_KeyEvent__VK_UP (38)
+ 
+-#define package_KeyEvent__VK_DOWN (-(jint)12345678L)
++#define package_KeyEvent__VK_DOWN (40)
+ 
+-#define package_KeyEvent__VK_SPACE (-(jint)12345678L)
++#define package_KeyEvent__VK_SPACE (SDLK_SPACE)
+ 
+-#define package_KeyEvent__VK_F1 (-(jint)12345678L)
++#define package_KeyEvent__VK_F1 (SDL_SCANCODE_F1)
+ 
+-#define package_KeyEvent__VK_BACK_SPACE (-(jint)12345678L)
++#define package_KeyEvent__VK_BACK_SPACE (SDLK_BACKSPACE)
+ 
+-#define package_KeyEvent__VK_ENTER (-(jint)12345678L)
++#define package_KeyEvent__VK_ENTER (SDLK_RETURN)
+ 
+ JCGO_NOSEP_STATIC package_KeyEvent CFASTCALL
+ package_KeyEvent__this__( package_KeyEvent This );
+diff -uarN jcgo_Out/Main.c jcgo_Out_Patched/Main.c
+--- jcgo_Out/Main.c	2021-07-16 16:20:03.693306826 -0500
++++ jcgo_Out_Patched/Main.c	2021-07-16 16:19:19.592473799 -0500
+@@ -1222,6 +1222,31 @@
+ MAINENTRY
+ ( int argc, JCGO_MAIN_TCHAR **targv )
+ {
++ if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
++  fprintf(stderr, "SDL_Init(): %s\n", SDL_GetError());
++  return 1;
++ }
++
++ wanted_audio.freq = 8000;
++ wanted_audio.format = AUDIO_S16;
++ wanted_audio.channels = 1;
++ wanted_audio.silence = 0;
++ wanted_audio.samples = 1024;
++ wanted_audio.callback = NULL;
++
++ if (SDL_OpenAudio(&wanted_audio, NULL) < 0) {
++  fprintf(stderr, "SDL_OpenAudio(): %s\n", SDL_GetError());
++  return 1;
++ }
++
++ SDL_PauseAudio(0);
++
++ window = SDL_CreateWindow("Runescape by Andrew Gower", SDL_WINDOWPOS_CENTERED,
++  SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
++ screen = SDL_GetWindowSurface(window);
++ pixel_surface = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, 0xff0000, 65280,
++  255, 0);
++
+  JCGO_MAIN_LAUNCH(argc, targv);
+  return 0;
+ }
+diff -uarN jcgo_Out/Main.h jcgo_Out_Patched/Main.h
+--- jcgo_Out/Main.h	2021-07-16 16:20:03.641305857 -0500
++++ jcgo_Out_Patched/Main.h	2021-07-16 16:19:19.592473799 -0500
+@@ -1557,4 +1557,18 @@
+ JCGO_SEP_EXTERN CONST struct java_lang_Object_methods_s jObjectArr15_methods;
+ JCGO_SEP_EXTERN CONST struct java_lang_Object_methods_s jObjectArr16_methods;
+ 
++#include <SDL2/SDL.h>
++
++#define WIDTH 512
++#define HEIGHT 346
++#define AREA WIDTH *HEIGHT
++
++SDL_Window *window;
++SDL_Surface *screen;
++SDL_Surface *pixel_surface;
++SDL_Event event;
++SDL_AudioSpec wanted_audio;
++
++short pcm_out[1024 * 1024];
++
+ #endif
+diff -uarN jcgo_Out/StrmAdPl.c jcgo_Out_Patched/StrmAdPl.c
+--- jcgo_Out/StrmAdPl.c	2021-07-16 16:20:03.617305410 -0500
++++ jcgo_Out_Patched/StrmAdPl.c	2021-07-16 16:19:19.608474106 -0500
+@@ -12,11 +12,33 @@
+ #include "jcgobchk.h"
+ #endif
+ 
++#define    SIGN_BIT        (0x80)   /* Sign bit for a A-law byte.        */
++#define    QUANT_MASK      (0xf)    /* Quantization field mask.          */
++#define    SEG_SHIFT       (4)      /* Left shift for segment number.    */
++#define    SEG_MASK        (0x70)   /* Segment field mask.               */
++#define    BIAS            (0x84)   /* Bias for linear code (for u-law). */
++
++int ulaw2linear(long size, unsigned char *u_ptr, short *out_ptr) {
++ short t;
++ unsigned char u_val;
++
++ for (long i=0; i< size; i++) {
++  u_val = ~(*u_ptr);
++  u_ptr++;
++  t = ((u_val & QUANT_MASK) << 3) + BIAS;
++  t <<= ((unsigned)u_val & SEG_MASK) >> SEG_SHIFT;
++  *out_ptr++ = ((u_val & SIGN_BIT) ? (BIAS - t) : (t - BIAS));
++ }
++
++ return 0;
++}
++
+ JCGO_NOSEP_FRWINL void CFASTCALL
+ package_StreamAudioPlayer__stopPlayer__( package_StreamAudioPlayer
+  This )
+ {
+  {
++  SDL_PauseAudio(1);
+  }
+ }
+ 
+@@ -26,6 +48,14 @@
+ {
+  JCGO_SYNC_BLOCKSAFENZ(This)
+  {
++  unsigned char ulaw[len];
++
++  for (int i = 0; i < len; i += 1) {
++   ulaw[i] = JCGO_ARRAY_BACCESS(buff, i + off);
++  }
++
++  ulaw2linear(len, ulaw, pcm_out);
++  SDL_QueueAudio(1, pcm_out, len * 2);
+  }
+  JCGO_SYNC_END
+ }
+diff -uarN jcgo_Out/Surface.c jcgo_Out_Patched/Surface.c
+--- jcgo_Out/Surface.c	2021-07-16 16:20:03.601305112 -0500
++++ jcgo_Out_Patched/Surface.c	2021-07-16 16:19:19.600473953 -0500
+@@ -786,6 +786,11 @@
+  {
+   (package_Surface__setcomplete__(
+    This));
++
++  jint* pixel_bytes = (jint*) JCGO_FIELD_NZACCESS(This, pixels);
++  memcpy(pixel_surface->pixels, pixel_bytes + 5, AREA * sizeof(jint));
++  SDL_BlitSurface(pixel_surface, NULL, screen, NULL);
++  SDL_UpdateWindowSurface(window);
+  }
+ }
+ 
