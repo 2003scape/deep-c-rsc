@@ -787,8 +787,14 @@ package_Surface__draw__II( package_Surface This, jint x, jint y )
   (package_Surface__setcomplete__(
    This));
 
+  if (!window) {
+   return;
+  }
+
   jint* pixel_bytes = (jint*) JCGO_FIELD_NZACCESS(This, pixels);
-  memcpy(pixel_surface->pixels, pixel_bytes + 5, AREA * sizeof(jint));
+  jint area = JCGO_FIELD_NZACCESS(This, width2) * JCGO_FIELD_NZACCESS(This,
+   height2);
+  memcpy(pixel_surface->pixels, pixel_bytes + 5, area * sizeof(jint));
   SDL_BlitSurface(pixel_surface, NULL, screen, NULL);
   SDL_UpdateWindowSurface(window);
  }

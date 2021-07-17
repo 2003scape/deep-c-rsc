@@ -1222,31 +1222,9 @@ jcgo_initClasses( void )
 MAINENTRY
 ( int argc, JCGO_MAIN_TCHAR **targv )
 {
- if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
-  fprintf(stderr, "SDL_Init(): %s\n", SDL_GetError());
-  return 1;
- }
-
- wanted_audio.freq = 8000;
- wanted_audio.format = AUDIO_S16;
- wanted_audio.channels = 1;
- wanted_audio.silence = 0;
- wanted_audio.samples = 1024;
- wanted_audio.callback = NULL;
-
- if (SDL_OpenAudio(&wanted_audio, NULL) < 0) {
-  fprintf(stderr, "SDL_OpenAudio(): %s\n", SDL_GetError());
-  return 1;
- }
-
- SDL_PauseAudio(0);
-
- window = SDL_CreateWindow("Runescape by Andrew Gower", SDL_WINDOWPOS_CENTERED,
-  SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
- screen = SDL_GetWindowSurface(window);
- pixel_surface = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, 0xff0000, 65280,
-  255, 0);
-
+#ifdef __MINGW32__
+ putenv("SDL_AUDIODRIVER=DirectSound");
+#endif
  JCGO_MAIN_LAUNCH(argc, targv);
  return 0;
 }

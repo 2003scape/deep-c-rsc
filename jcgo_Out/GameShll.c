@@ -12,6 +12,8 @@
 #include "jcgobchk.h"
 #endif
 
+#include <stdio.h>
+
 void get_keycodes(jchar* charCode, jint* code) {
  switch (event.key.keysym.scancode) {
   case SDL_SCANCODE_LEFT:
@@ -518,8 +520,25 @@ package_GameShell__this__( package_GameShell This )
 {
  {
   ;
-  JCGO_FIELD_NZACCESS(This, appletWidth)= (jint)512;
-  JCGO_FIELD_NZACCESS(This, appletHeight)= (jint)344;
+  jint width;
+  jint height;
+  char* env_width = getenv("MUDCLIENT_WIDTH");
+  char* env_height = getenv("MUDCLIENT_HEIGHT");
+
+  if (env_width) {
+      width = atoi(env_width);
+  } else {
+      width = 512;
+  }
+
+  if (env_height) {
+      height = atoi(env_height);
+  } else {
+      height = 344;
+  }
+
+  JCGO_FIELD_NZACCESS(This, appletWidth)= (jint)width;
+  JCGO_FIELD_NZACCESS(This, appletHeight)= (jint)height;
   JCGO_FIELD_NZACCESS(This, targetFps)= (jint)20;
   JCGO_FIELD_NZACCESS(This, maxDrawTime)= (jint)1000;
   JCGO_FIELD_NZACCESS(This, timings)= (jlongArr)jcgo_newArray(JCGO_CORECLASS_FOR(OBJT_jlong),
@@ -627,6 +646,34 @@ JCGO_NOSEP_STATIC void CFASTCALL
 package_GameShell__run__( package_GameShell This )
 {
  {
+  jint width = JCGO_FIELD_NZACCESS(This, appletWidth);
+  jint height = JCGO_FIELD_NZACCESS(This, appletHeight) + 2;
+
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
+   fprintf(stderr, "SDL_Init(): %s\n", SDL_GetError());
+   exit(1);
+  }
+
+  wanted_audio.freq = 8000;
+  wanted_audio.format = AUDIO_S16;
+  wanted_audio.channels = 1;
+  wanted_audio.silence = 0;
+  wanted_audio.samples = 1024;
+  wanted_audio.callback = NULL;
+
+  if (SDL_OpenAudio(&wanted_audio, NULL) < 0) {
+   fprintf(stderr, "SDL_OpenAudio(): %s\n", SDL_GetError());
+   exit(1);
+  }
+
+  SDL_PauseAudio(0);
+
+  window = SDL_CreateWindow("Runescape by Andrew Gower", SDL_WINDOWPOS_CENTERED,
+   SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
+  screen = SDL_GetWindowSurface(window);
+  pixel_surface = SDL_CreateRGBSurface(0, width, height, 32, 0xff0000, 0x00ff00,
+   0x0000ff, 0);
+
   jint i;
   jint j;
   jint sleep;

@@ -1,10 +1,12 @@
 diff -uarN jcgo_Out/GameShll.c jcgo_Out_Patched/GameShll.c
---- jcgo_Out/GameShll.c	2021-07-16 16:20:03.489303026 -0500
-+++ jcgo_Out_Patched/GameShll.c	2021-07-16 16:19:19.608474106 -0500
-@@ -12,6 +12,126 @@
+--- jcgo_Out/GameShll.c	2021-07-17 14:14:57.909182969 -0500
++++ jcgo_Out_Patched/GameShll.c	2021-07-17 14:14:38.724958991 -0500
+@@ -12,6 +12,128 @@
  #include "jcgobchk.h"
  #endif
  
++#include <stdio.h>
++
 +void get_keycodes(jchar* charCode, jint* code) {
 + switch (event.key.keysym.scancode) {
 +  case SDL_SCANCODE_LEFT:
@@ -128,7 +130,70 @@ diff -uarN jcgo_Out/GameShll.c jcgo_Out_Patched/GameShll.c
  JCGO_NOSEP_INLINE void CFASTCALL
  package_GameShell__keyPressed__CI( package_GameShell This, jint code,
   jchar chr )
-@@ -626,6 +746,7 @@
+@@ -398,8 +520,25 @@
+ {
+  {
+   ;
+-  JCGO_FIELD_NZACCESS(This, appletWidth)= (jint)512;
+-  JCGO_FIELD_NZACCESS(This, appletHeight)= (jint)344;
++  jint width;
++  jint height;
++  char* env_width = getenv("MUDCLIENT_WIDTH");
++  char* env_height = getenv("MUDCLIENT_HEIGHT");
++
++  if (env_width) {
++      width = atoi(env_width);
++  } else {
++      width = 512;
++  }
++
++  if (env_height) {
++      height = atoi(env_height);
++  } else {
++      height = 344;
++  }
++
++  JCGO_FIELD_NZACCESS(This, appletWidth)= (jint)width;
++  JCGO_FIELD_NZACCESS(This, appletHeight)= (jint)height;
+   JCGO_FIELD_NZACCESS(This, targetFps)= (jint)20;
+   JCGO_FIELD_NZACCESS(This, maxDrawTime)= (jint)1000;
+   JCGO_FIELD_NZACCESS(This, timings)= (jlongArr)jcgo_newArray(JCGO_CORECLASS_FOR(OBJT_jlong),
+@@ -507,6 +646,34 @@
+ package_GameShell__run__( package_GameShell This )
+ {
+  {
++  jint width = JCGO_FIELD_NZACCESS(This, appletWidth);
++  jint height = JCGO_FIELD_NZACCESS(This, appletHeight) + 2;
++
++  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
++   fprintf(stderr, "SDL_Init(): %s\n", SDL_GetError());
++   exit(1);
++  }
++
++  wanted_audio.freq = 8000;
++  wanted_audio.format = AUDIO_S16;
++  wanted_audio.channels = 1;
++  wanted_audio.silence = 0;
++  wanted_audio.samples = 1024;
++  wanted_audio.callback = NULL;
++
++  if (SDL_OpenAudio(&wanted_audio, NULL) < 0) {
++   fprintf(stderr, "SDL_OpenAudio(): %s\n", SDL_GetError());
++   exit(1);
++  }
++
++  SDL_PauseAudio(0);
++
++  window = SDL_CreateWindow("Runescape by Andrew Gower", SDL_WINDOWPOS_CENTERED,
++   SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
++  screen = SDL_GetWindowSurface(window);
++  pixel_surface = SDL_CreateRGBSurface(0, width, height, 32, 0xff0000, 0x00ff00,
++   0x0000ff, 0);
++
+   jint i;
+   jint j;
+   jint sleep;
+@@ -626,6 +793,7 @@
     while (i1 < (jint)256)
     {
      jint jcgo_rcvrI1;
@@ -137,8 +202,8 @@ diff -uarN jcgo_Out/GameShll.c jcgo_Out_Patched/GameShll.c
       This));
      i1+= j;
 diff -uarN jcgo_Out/KeyEvent.h jcgo_Out_Patched/KeyEvent.h
---- jcgo_Out/KeyEvent.h	2021-07-16 16:20:03.545304070 -0500
-+++ jcgo_Out_Patched/KeyEvent.h	2021-07-16 16:19:19.608474106 -0500
+--- jcgo_Out/KeyEvent.h	2021-07-17 14:14:57.981183810 -0500
++++ jcgo_Out_Patched/KeyEvent.h	2021-07-17 14:14:38.696958665 -0500
 @@ -2,21 +2,21 @@
  
  #ifdef JCGO_116
@@ -170,52 +235,28 @@ diff -uarN jcgo_Out/KeyEvent.h jcgo_Out_Patched/KeyEvent.h
  JCGO_NOSEP_STATIC package_KeyEvent CFASTCALL
  package_KeyEvent__this__( package_KeyEvent This );
 diff -uarN jcgo_Out/Main.c jcgo_Out_Patched/Main.c
---- jcgo_Out/Main.c	2021-07-16 16:20:03.693306826 -0500
-+++ jcgo_Out_Patched/Main.c	2021-07-16 16:19:19.592473799 -0500
-@@ -1222,6 +1222,31 @@
+--- jcgo_Out/Main.c	2021-07-17 14:14:58.117185399 -0500
++++ jcgo_Out_Patched/Main.c	2021-07-17 14:14:38.708958804 -0500
+@@ -1222,6 +1222,9 @@
  MAINENTRY
  ( int argc, JCGO_MAIN_TCHAR **targv )
  {
-+ if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
-+  fprintf(stderr, "SDL_Init(): %s\n", SDL_GetError());
-+  return 1;
-+ }
-+
-+ wanted_audio.freq = 8000;
-+ wanted_audio.format = AUDIO_S16;
-+ wanted_audio.channels = 1;
-+ wanted_audio.silence = 0;
-+ wanted_audio.samples = 1024;
-+ wanted_audio.callback = NULL;
-+
-+ if (SDL_OpenAudio(&wanted_audio, NULL) < 0) {
-+  fprintf(stderr, "SDL_OpenAudio(): %s\n", SDL_GetError());
-+  return 1;
-+ }
-+
-+ SDL_PauseAudio(0);
-+
-+ window = SDL_CreateWindow("Runescape by Andrew Gower", SDL_WINDOWPOS_CENTERED,
-+  SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
-+ screen = SDL_GetWindowSurface(window);
-+ pixel_surface = SDL_CreateRGBSurface(0, WIDTH, HEIGHT, 32, 0xff0000, 65280,
-+  255, 0);
-+
++#ifdef __MINGW32__
++ putenv("SDL_AUDIODRIVER=DirectSound");
++#endif
   JCGO_MAIN_LAUNCH(argc, targv);
   return 0;
  }
 diff -uarN jcgo_Out/Main.h jcgo_Out_Patched/Main.h
---- jcgo_Out/Main.h	2021-07-16 16:20:03.641305857 -0500
-+++ jcgo_Out_Patched/Main.h	2021-07-16 16:19:19.592473799 -0500
-@@ -1557,4 +1557,18 @@
+--- jcgo_Out/Main.h	2021-07-17 14:14:58.057184698 -0500
++++ jcgo_Out_Patched/Main.h	2021-07-17 14:14:38.724958991 -0500
+@@ -1557,4 +1557,16 @@
  JCGO_SEP_EXTERN CONST struct java_lang_Object_methods_s jObjectArr15_methods;
  JCGO_SEP_EXTERN CONST struct java_lang_Object_methods_s jObjectArr16_methods;
  
-+#include <SDL2/SDL.h>
++#define SDL_MAIN_HANDLED
 +
-+#define WIDTH 512
-+#define HEIGHT 346
-+#define AREA WIDTH *HEIGHT
++#include <SDL2/SDL.h>
 +
 +SDL_Window *window;
 +SDL_Surface *screen;
@@ -227,8 +268,8 @@ diff -uarN jcgo_Out/Main.h jcgo_Out_Patched/Main.h
 +
  #endif
 diff -uarN jcgo_Out/StrmAdPl.c jcgo_Out_Patched/StrmAdPl.c
---- jcgo_Out/StrmAdPl.c	2021-07-16 16:20:03.617305410 -0500
-+++ jcgo_Out_Patched/StrmAdPl.c	2021-07-16 16:19:19.608474106 -0500
+--- jcgo_Out/StrmAdPl.c	2021-07-17 14:14:58.041184512 -0500
++++ jcgo_Out_Patched/StrmAdPl.c	2021-07-17 14:14:38.724958991 -0500
 @@ -12,11 +12,33 @@
  #include "jcgobchk.h"
  #endif
@@ -279,15 +320,21 @@ diff -uarN jcgo_Out/StrmAdPl.c jcgo_Out_Patched/StrmAdPl.c
   JCGO_SYNC_END
  }
 diff -uarN jcgo_Out/Surface.c jcgo_Out_Patched/Surface.c
---- jcgo_Out/Surface.c	2021-07-16 16:20:03.601305112 -0500
-+++ jcgo_Out_Patched/Surface.c	2021-07-16 16:19:19.600473953 -0500
-@@ -786,6 +786,11 @@
+--- jcgo_Out/Surface.c	2021-07-17 14:14:58.025184324 -0500
++++ jcgo_Out_Patched/Surface.c	2021-07-17 14:14:38.716958898 -0500
+@@ -786,6 +786,17 @@
   {
    (package_Surface__setcomplete__(
     This));
 +
++  if (!window) {
++   return;
++  }
++
 +  jint* pixel_bytes = (jint*) JCGO_FIELD_NZACCESS(This, pixels);
-+  memcpy(pixel_surface->pixels, pixel_bytes + 5, AREA * sizeof(jint));
++  jint area = JCGO_FIELD_NZACCESS(This, width2) * JCGO_FIELD_NZACCESS(This,
++   height2);
++  memcpy(pixel_surface->pixels, pixel_bytes + 5, area * sizeof(jint));
 +  SDL_BlitSurface(pixel_surface, NULL, screen, NULL);
 +  SDL_UpdateWindowSurface(window);
   }

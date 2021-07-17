@@ -1557,11 +1557,9 @@ JCGO_SEP_EXTERN CONST struct java_lang_Object_methods_s jObjectArr14_methods;
 JCGO_SEP_EXTERN CONST struct java_lang_Object_methods_s jObjectArr15_methods;
 JCGO_SEP_EXTERN CONST struct java_lang_Object_methods_s jObjectArr16_methods;
 
-#include <SDL2/SDL.h>
+#define SDL_MAIN_HANDLED
 
-#define WIDTH 512
-#define HEIGHT 346
-#define AREA WIDTH *HEIGHT
+#include <SDL2/SDL.h>
 
 SDL_Window *window;
 SDL_Surface *screen;
