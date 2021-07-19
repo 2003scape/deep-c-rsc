@@ -3887,14 +3887,6 @@ public class mudclient extends GameConnection {
     }
 
     protected void startGame() {
-        /*
-        if (appletMode) {
-            String s = getDocumentBase().getHost().toLowerCase();
-            if (!s.endsWith("jagex.com") && !s.endsWith("jagex.co.uk") && !s.endsWith("runescape.com") && !s.endsWith("runescape.co.uk") && !s.endsWith("runescape.net") && !s.endsWith("runescape.org") && !s.endsWith("penguin") && !s.endsWith("puffin")) {
-                errorLoadingCodebase = true;
-                return;
-            }
-        }*/
         int total_exp = 0;
         for (int level = 0; level < 99; level++) {
             int level_1 = level + 1;
@@ -3903,35 +3895,11 @@ public class mudclient extends GameConnection {
             experienceArray[level] = total_exp & 0xffffffc;
         }
 
-        /*
-        try {
-            String s1 = getParameter("referid");
-            referid = Integer.parseInt(s1);
-        } catch (Exception Ex) {
-        }
-
-        try {
-            String s2 = getParameter("member");
-            int j1 = Integer.parseInt(s2);
-            if (j1 == 1)
-                members = true;
-        } catch (Exception Ex) {
-        }
-        */
-
         if (appletMode)
             super.port = 43594;
+
         maxReadTries = 1000;
         clientVersion = Version.CLIENT;
-        /*
-        try {
-            String s3 = getParameter("poff");
-            int k1 = Integer.parseInt(s3);
-            super.port += k1;
-            System.out.println("Offset: " + k1);
-        } catch (Exception Ex) {
-        }
-        */
         loadGameConfig();
         if (errorLoadingData)
             return;
