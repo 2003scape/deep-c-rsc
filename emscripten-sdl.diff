@@ -1,0 +1,606 @@
+diff -uarN jcgo_Out/ClntStrm.c jcgo_Out_Patched/ClntStrm.c
+--- jcgo_Out/ClntStrm.c	2021-07-19 13:56:54.496508856 -0500
++++ jcgo_Out_Patched/ClntStrm.c	2021-07-19 13:58:22.185577736 -0500
+@@ -12,6 +12,36 @@
+ #include "jcgobchk.h"
+ #endif
+ 
++EM_JS(void, js_clientStream_new, (), {
++ const socket = new window.MUDCLIENT_Socket('localhost', 43595);
++ Asyncify.handleAsync(async () => {
++  await socket.connect();
++  window.MUDCLIENT_socket = socket;
++ });
++});
++
++EM_JS(void, js_clientStream_writeStreamBytes, (char* buff, int len), {
++ window.MUDCLIENT_socket.write(window.HEAP8.slice(buff, buff + len));
++});
++
++EM_JS(int, js_clientStream_readStream, (), {
++ return Asyncify.handleAsync(async () => {
++  return await window.MUDCLIENT_socket.read();
++ });
++});
++
++EM_JS(int, js_clientStream_availableStream, (), {
++ return Asyncify.handleAsync(async () => {
++  return await window.MUDCLIENT_socket.available();
++ });
++});
++
++EM_JS(void, js_clientStream_readStreamBytes, (char* buff, int len), {
++ Asyncify.handleAsync(async () => {
++  await window.MUDCLIENT_socket.readBytes(window.HEAP8, buff, len);
++ });
++});
++
+ JCGO_NOSEP_INLINE package_ClientStream CFASTCALL
+ package_ClientStream__this__L7rjha( package_ClientStream This, package_GameShell
+  applet )
+@@ -28,6 +58,7 @@
+ package_ClientStream__new__L7rjha( package_GameShell applet )
+ {
+  JCGO_CLINIT_TRIG(package_ClientStream__class);
++ js_clientStream_new();
+  return package_ClientStream__this__L7rjha(
+   (package_ClientStream)jcgo_newObject((jvtable)&package_ClientStream_methods),
+   applet);
+@@ -53,7 +84,7 @@
+   {
+    return 0;
+   }
+-  return (jint)12345678L;
++  return (jint) js_clientStream_readStream();
+  }
+ }
+ 
+@@ -66,7 +97,7 @@
+   {
+    return 0;
+   }
+-  return (jint)12345678L;
++  return (jint) js_clientStream_availableStream();
+  }
+ }
+ 
+@@ -79,11 +110,16 @@
+   {
+    return;
+   }
+-  (java_io_PrintStream__println__Ls(
++  char bytes[len];
++  js_clientStream_readStreamBytes(bytes, len);
++  for (int i = 0; i < len; i++) {
++   JCGO_ARRAY_BACCESS(buff, i + off) = (jbyte) bytes[i];
++  }
++  /*(java_io_PrintStream__println__Ls(
+    JCGO_CLINIT_VARACC(java_lang_System__class, java_lang_System__out),
+    JCGO_STRREF_OF(jcgo_string2_ClntStrm)));
+   JCGO_THROW_EXC((java_io_IOException__new__Ls(
+-   JCGO_STRREF_OF(jcgo_string3_ClntStrm))));
++   JCGO_STRREF_OF(jcgo_string3_ClntStrm))));*/
+  }
+ }
+ 
+@@ -101,11 +137,16 @@
+    JCGO_FIELD_NZACCESS(This, buffer)= (jbyteArr)jcgo_newArray(JCGO_CORECLASS_FOR(OBJT_jbyte),
+     0, (jint)5000);
+   }
+-  (java_io_PrintStream__println__Ls(
++  char bytes[len];
++  for (int i = 0; i < len; i++) {
++   bytes[i] = JCGO_ARRAY_BACCESS(buff, off + i);
++  }
++  js_clientStream_writeStreamBytes(bytes, len);
++  /*(java_io_PrintStream__println__Ls(
+    JCGO_CLINIT_VARACC(java_lang_System__class, java_lang_System__out),
+    JCGO_STRREF_OF(jcgo_string4_ClntStrm)));
+   JCGO_THROW_EXC((java_io_IOException__new__Ls(
+-   JCGO_STRREF_OF(jcgo_string5_ClntStrm))));
++   JCGO_STRREF_OF(jcgo_string5_ClntStrm))));*/
+  }
+ }
+ 
+diff -uarN jcgo_Out/GameShll.c jcgo_Out_Patched/GameShll.c
+--- jcgo_Out/GameShll.c	2021-07-19 13:56:54.400507684 -0500
++++ jcgo_Out_Patched/GameShll.c	2021-07-19 13:57:19.720816667 -0500
+@@ -12,6 +12,126 @@
+ #include "jcgobchk.h"
+ #endif
+ 
++void get_keycodes(jchar* charCode, jint* code) {
++ switch (event.key.keysym.scancode) {
++  case SDL_SCANCODE_LEFT:
++   *code = 37;
++   *charCode = 65535;
++   break;
++  case SDL_SCANCODE_RIGHT:
++   *code = 39;
++   *charCode = 65535;
++   break;
++  case SDL_SCANCODE_UP:
++   *code = 38;
++   *charCode = 65535;
++   break;
++  case SDL_SCANCODE_DOWN:
++   *code = 40;
++   *charCode = 65535;
++   break;
++  default:
++   *charCode = event.key.keysym.sym;
++   const char* keyName = SDL_GetKeyName(event.key.keysym.sym);
++
++   if (strlen(keyName) == 1) {
++    *code = keyName[0];
++   } else {
++    *code = *charCode;
++   }
++
++   // absolutely dumb hack but i don't want to use SDL's textinput
++   if (event.key.keysym.mod & KMOD_SHIFT) {
++    if (*charCode >= 'a' && *charCode <= 'z') {
++      *charCode -= 32;
++    } else {
++     switch (*charCode) {
++      case ';':
++       *charCode = ':';
++       break;
++      case '`':
++       *charCode = '~';
++       break;
++      case '1':
++       *charCode = '!';
++       break;
++      case '2':
++       *charCode = '@';
++       break;
++      case '3':
++       *charCode = '#';
++       break;
++      case '4':
++       *charCode = '$';
++       break;
++      case '5':
++       *charCode = '%';
++       break;
++      case '6':
++       *charCode = '^';
++       break;
++      case '7':
++       *charCode = '&';
++       break;
++      case '8':
++       *charCode = '*';
++       break;
++      case '9':
++       *charCode = '(';
++       break;
++      case '0':
++       *charCode = ')';
++       break;
++      case '-':
++       *charCode = '_';
++       break;
++      case '=':
++       *charCode = '+';
++       break;
++     }
++    }
++   }
++   break;
++ }
++}
++
++void handle_sdl_events(package_GameShell This) {
++ while (SDL_PollEvent(&event)) {
++  switch (event.type) {
++   case SDL_QUIT:
++    exit(0);
++    break;
++   case SDL_KEYDOWN: {
++    jchar charCode;
++    jint code;
++    get_keycodes(&charCode, &code);
++    (package_GameShell__keyPressed__CI(This, code, charCode));
++    break;
++   }
++   case SDL_KEYUP: {
++    jchar charCode;
++    jint code;
++    get_keycodes(&charCode, &code);
++    (package_GameShell__keyReleased__I(This, code));
++    break;
++   }
++   case SDL_MOUSEMOTION:
++    (package_GameShell__mouseMoved__II(This, event.motion.x, event.motion.y));
++    break;
++   case SDL_MOUSEBUTTONDOWN: {
++    jint button = event.button.button == 3 ? 2 : 1;
++    (package_GameShell__mousePressed__III(This, event.button.x, event.button.y,
++     button));
++    break;
++   }
++   case SDL_MOUSEBUTTONUP:
++    (package_GameShell__mouseReleased__II(This, event.button.x,
++     event.button.y));
++    break;
++  }
++ }
++}
++
+ JCGO_NOSEP_INLINE void CFASTCALL
+ package_GameShell__keyPressed__CI( package_GameShell This, jint code,
+  jchar chr )
+@@ -287,6 +407,34 @@
+ package_GameShell__run__( package_GameShell This )
+ {
+  {
++  jint width = JCGO_FIELD_NZACCESS(This, appletWidth);
++  jint height = JCGO_FIELD_NZACCESS(This, appletHeight) + 2;
++
++  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
++   fprintf(stderr, "SDL_Init(): %s\n", SDL_GetError());
++   exit(1);
++  }
++
++  wanted_audio.freq = 8000;
++  wanted_audio.format = AUDIO_S16;
++  wanted_audio.channels = 1;
++  wanted_audio.silence = 0;
++  wanted_audio.samples = 1024;
++  wanted_audio.callback = NULL;
++
++  if (SDL_OpenAudio(&wanted_audio, NULL) < 0) {
++   fprintf(stderr, "SDL_OpenAudio(): %s\n", SDL_GetError());
++   exit(1);
++  }
++
++  SDL_PauseAudio(0);
++
++  window = SDL_CreateWindow("Runescape by Andrew Gower", SDL_WINDOWPOS_CENTERED,
++   SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
++  screen = SDL_GetWindowSurface(window);
++  pixel_surface = SDL_CreateRGBSurface(0, width, height, 32, 0xff0000, 0x00ff00,
++   0x0000ff, 0);
++
+   jint i;
+   jint j;
+   jint sleep;
+@@ -370,8 +518,7 @@
+      sleep= JCGO_FIELD_NZACCESS(This, threadSleep);
+     }
+    }
+-   (java_io_PrintStream__println__I(
+-    java_lang_System__out, sleep + (jint)51339L));
++   emscripten_sleep(sleep);
+    JCGO_ARRAY_JACCESS(JCGO_FIELD_NZACCESS(This, timings), i)= time;
+    i= (i + (jint)1) % (jint)10;
+    if (sleep > (jint)1)
+@@ -394,6 +541,7 @@
+    while (i1 < (jint)256)
+    {
+     jint jcgo_rcvrI1;
++    handle_sdl_events(This);
+     (JCGO_CALL_NZVFUNC(This)->handleInputs__(
+      This));
+     i1+= j;
+@@ -633,8 +781,7 @@
+    JCGO_STRREF_OF(jcgo_string19_GameShll)));
+   (JCGO_CALL_NZVFUNC(This)->onClosing__(
+    This));
+-  (java_io_PrintStream__println__I(
+-   java_lang_System__out, (jint)51339L + (jint)1000));
++  emscripten_sleep(1000);
+   (java_lang_System__exit__I(
+    0));
+  }
+diff -uarN jcgo_Out/GmCnnctn.c jcgo_Out_Patched/GmCnnctn.c
+--- jcgo_Out/GmCnnctn.c	2021-07-19 13:56:54.404507733 -0500
++++ jcgo_Out_Patched/GmCnnctn.c	2021-07-19 13:57:19.720816667 -0500
+@@ -348,9 +348,7 @@
+   {
+    (JCGO_CALL_NZVFUNC(This)->showLoginScreenStatus__LsLs(
+     This, JCGO_STRREF_OF(jcgo_string11_GmCnnctn), JCGO_STRREF_OF(jcgo_string12_GmCnnctn)));
+-   (java_io_PrintStream__println__I(
+-    JCGO_CLINIT_VARACC(java_lang_System__class, java_lang_System__out),
+-    (jint)51339L + (jint)2000));
++   emscripten_sleep(2000);
+    (JCGO_CALL_NZVFUNC(This)->showLoginScreenStatus__LsLs(
+     This, JCGO_STRREF_OF(jcgo_string13_GmCnnctn), JCGO_STRREF_OF(jcgo_string14_GmCnnctn)));
+    return;
+@@ -742,9 +740,7 @@
+   }
+   if (JCGO_FIELD_NZACCESS(This, autoLoginTimeout) > 0)
+   {
+-   (java_io_PrintStream__println__I(
+-    JCGO_CLINIT_VARACC(java_lang_System__class, java_lang_System__out),
+-    (jint)51339L + (jint)5000));
++   emscripten_sleep(5000);
+    JCGO_FIELD_NZACCESS(This, autoLoginTimeout)--;
+    (package_GameConnection__login__LsLsZ(
+     This, JCGO_FIELD_NZACCESS(This, username), JCGO_FIELD_NZACCESS(This,
+diff -uarN jcgo_Out/KeyEvent.h jcgo_Out_Patched/KeyEvent.h
+--- jcgo_Out/KeyEvent.h	2021-07-19 13:56:54.448508270 -0500
++++ jcgo_Out_Patched/KeyEvent.h	2021-07-19 13:57:19.732816813 -0500
+@@ -2,21 +2,21 @@
+ 
+ #ifdef JCGO_116
+ 
+-#define package_KeyEvent__VK_LEFT (-(jint)12345678L)
++#define package_KeyEvent__VK_LEFT (37)
+ 
+-#define package_KeyEvent__VK_RIGHT (-(jint)12345678L)
++#define package_KeyEvent__VK_RIGHT (39)
+ 
+-#define package_KeyEvent__VK_UP (-(jint)12345678L)
++#define package_KeyEvent__VK_UP (38)
+ 
+-#define package_KeyEvent__VK_DOWN (-(jint)12345678L)
++#define package_KeyEvent__VK_DOWN (40)
+ 
+-#define package_KeyEvent__VK_SPACE (-(jint)12345678L)
++#define package_KeyEvent__VK_SPACE (SDLK_SPACE)
+ 
+-#define package_KeyEvent__VK_F1 (-(jint)12345678L)
++#define package_KeyEvent__VK_F1 (SDL_SCANCODE_F1)
+ 
+-#define package_KeyEvent__VK_BACK_SPACE (-(jint)12345678L)
++#define package_KeyEvent__VK_BACK_SPACE (SDLK_BACKSPACE)
+ 
+-#define package_KeyEvent__VK_ENTER (-(jint)12345678L)
++#define package_KeyEvent__VK_ENTER (SDLK_RETURN)
+ 
+ JCGO_NOSEP_STATIC package_KeyEvent CFASTCALL
+ package_KeyEvent__this__( package_KeyEvent This );
+diff -uarN jcgo_Out/Main.c jcgo_Out_Patched/Main.c
+--- jcgo_Out/Main.c	2021-07-19 13:56:54.552509540 -0500
++++ jcgo_Out_Patched/Main.c	2021-07-19 13:57:19.748817008 -0500
+@@ -1120,6 +1120,204 @@
+ MAINENTRY
+ ( int argc, JCGO_MAIN_TCHAR **targv )
+ {
++ EM_ASM(
++     const CLOSE_TIMEOUT = 5000;
++
++     class Socket {
++         constructor(host, port) {
++             this.host = host;
++             this.port = port;
++
++             this.client = null;
++             this.connected = false;
++
++             // amount of bytes are left to read since last read call (in total)
++             this.bytesAvailable = 0;
++
++             // the message buffers that arrive from the websocket
++             this.buffers = [];
++
++             // the current buffer we're reading
++             this.currentBuffer = null;
++
++             // amount of bytes we read in current buffer
++             this.offset = 0;
++
++             // amount of bytes left in current buffer
++             this.bytesLeft = 0;
++         }
++
++         connect() {
++             return new Promise((resolve, reject) => {
++                 this.client = new WebSocket(
++                     'ws://' + this.host + ':' + this.port,
++                     'binary'
++                 );
++
++                 const closeTimeout = setTimeout(() => {
++                     if (!this.connected) {
++                         this.client.close();
++                         reject(new Error('websocket connect timeout'));
++                     }
++                 }, CLOSE_TIMEOUT);
++
++                 this.client.binaryType = 'arraybuffer';
++
++                 const onError = (err) => {
++                     if (this.onError) {
++                         this.onError(err);
++                         this.onError = undefined;
++                     }
++
++                     reject(err);
++                 };
++
++                 this.client.addEventListener('error', onError);
++
++                 this.client.addEventListener('close', () => {
++                     if (this.onClose) {
++                         this.onClose(-1);
++                         this.onClose = undefined;
++                     }
++
++                     this.connected = false;
++                     this.clear();
++                 });
++
++                 this.client.addEventListener('message', (msg) => {
++                     this.buffers.push(new Int8Array(msg.data));
++                     this.bytesAvailable += msg.data.byteLength;
++                     this.refreshCurrentBuffer();
++
++                     if (this.onNextMessage) {
++                         this.onNextMessage(msg.data.byteLength);
++                         this.onNextMessage = undefined;
++                     }
++                 });
++
++                 this.client.addEventListener('open', () => {
++                     this.connected = true;
++                     clearTimeout(closeTimeout);
++                     resolve();
++                 });
++             });
++         }
++
++         write(bytes, offset = 0, length = -1) {
++             if (!this.connected) {
++                 throw new Error('attempting to write to closed socket');
++             }
++
++             length = length === -1 ? bytes.length : length;
++
++             this.client.send(bytes.slice(offset, offset + length));
++         }
++
++         refreshCurrentBuffer() {
++             if (this.bytesLeft === 0 && this.bytesAvailable > 0) {
++                 this.currentBuffer = this.buffers.shift();
++                 this.offset = 0;
++
++                 if (this.currentBuffer && this.currentBuffer.length) {
++                     this.bytesLeft = this.currentBuffer.length;
++                 } else {
++                     this.bytesLeft = 0;
++                 }
++             }
++         }
++
++         // read the first byte available in the buffer, or wait for one to be sent
++         // if none are available.
++         async read() {
++             if (!this.connected) {
++                 return -1;
++             }
++
++             if (this.bytesLeft > 0) {
++                 this.bytesLeft--;
++                 this.bytesAvailable--;
++
++                 return this.currentBuffer[this.offset++] & 0xff;
++             }
++
++             const bytesRead = await new Promise((resolve, reject) => {
++                 this.onClose = resolve;
++                 this.onError = reject;
++                 this.onNextMessage = resolve;
++             });
++
++             if (bytesRead === -1) {
++                 return -1;
++             }
++
++             return await this.read();
++         }
++
++         // read multiple bytes (specified by `length`) and put them into the
++         // `destination` array at specified `offset` (0 by default).
++         async readBytes(destination, offset = 0, length = -1) {
++             if (!this.connected) {
++                 return -1;
++             }
++
++             length = length === -1 ? destination.length : length;
++
++             if (this.bytesAvailable >= length) {
++                 while (length > 0) {
++                     destination[offset++] =
++                         this.currentBuffer[this.offset++] & 0xff;
++
++                     this.bytesLeft -= 1;
++                     this.bytesAvailable -= 1;
++                     length -= 1;
++
++                     if (this.bytesLeft === 0) {
++                         this.refreshCurrentBuffer();
++                     }
++                 }
++
++                 return;
++             }
++
++             const bytesRead = await new Promise((resolve, reject) => {
++                 this.onClose = resolve;
++                 this.onError = reject;
++                 this.onNextMessage = resolve;
++             });
++
++             if (bytesRead === -1) {
++                 return -1;
++             }
++
++             return await this.readBytes(destination, offset, length);
++         }
++
++         close() {
++             if (!this.connected) {
++                 return;
++             }
++
++             this.client.close();
++         }
++
++         available() {
++             return this.bytesAvailable;
++         }
++
++         clear() {
++             if (this.connected) {
++                 this.client.close();
++             }
++
++             this.currentBuffer = null;
++             this.buffers.length = 0;
++             this.bytesLeft = 0;
++         }
++     }
++
++     window.MUDCLIENT_Socket = Socket;
++ );
++
+  JCGO_MAIN_LAUNCH(argc, targv);
+  return 0;
+ }
+diff -uarN jcgo_Out/Main.h jcgo_Out_Patched/Main.h
+--- jcgo_Out/Main.h	2021-07-19 13:56:54.508509003 -0500
++++ jcgo_Out_Patched/Main.h	2021-07-19 13:57:19.748817008 -0500
+@@ -1376,4 +1376,15 @@
+ JCGO_SEP_EXTERN CONST struct java_lang_Object_methods_s jObjectArr15_methods;
+ JCGO_SEP_EXTERN CONST struct java_lang_Object_methods_s jObjectArr16_methods;
+ 
++#include <SDL2/SDL.h>
++#include <emscripten.h>
++
++SDL_Window *window;
++SDL_Surface *screen;
++SDL_Surface *pixel_surface;
++SDL_Event event;
++SDL_AudioSpec wanted_audio;
++
++short pcm_out[1024 * 1024];
++
+ #endif
+diff -uarN jcgo_Out/Surface.c jcgo_Out_Patched/Surface.c
+--- jcgo_Out/Surface.c	2021-07-19 13:56:54.448508270 -0500
++++ jcgo_Out_Patched/Surface.c	2021-07-19 13:57:19.732816813 -0500
+@@ -786,9 +786,17 @@
+  {
+   (package_Surface__setcomplete__(
+    This));
+-  (java_io_PrintStream__println__Ls(
+-   JCGO_CLINIT_VARACC(java_lang_System__class, java_lang_System__out),
+-   JCGO_STRREF_OF(jcgo_string5_Surface)));
++
++  if (!window) {
++   return;
++  }
++
++  jint* pixel_bytes = (jint*) JCGO_FIELD_NZACCESS(This, pixels);
++  jint area = JCGO_FIELD_NZACCESS(This, width2) * JCGO_FIELD_NZACCESS(This,
++   height2);
++  memcpy(pixel_surface->pixels, pixel_bytes + 5, area * sizeof(jint));
++  SDL_BlitSurface(pixel_surface, NULL, screen, NULL);
++  SDL_UpdateWindowSurface(window);
+  }
+ }
+ 

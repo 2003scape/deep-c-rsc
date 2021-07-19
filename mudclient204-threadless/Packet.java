@@ -2,31 +2,12 @@ import java.io.IOException;
 
 public class Packet {
 
-    //static char charMap[];
     public static int anIntArray537[] = new int[256];
     public static int anIntArray541[] = new int[256];
     public int readTries;
     public int maxReadTries;
     public int packetStart;
     public byte packetData[];
-    /*private static int anIntArray521[] = {
-        0, 1, 3, 7, 15, 31, 63, 127, 255, 511,
-        1023, 2047, 4095, 8191, 16383, 32767, 65535, 0x1ffff, 0x3ffff, 0x7ffff,
-        0xfffff, 0x1fffff, 0x3fffff, 0x7fffff, 0xffffff, 0x1ffffff, 0x3ffffff, 0x7ffffff, 0xfffffff, 0x1fffffff,
-        0x3fffffff, 0x7fffffff, -1
-    };
-    int anInt522 = 61;
-    int anInt523 = 59;
-    int anInt524 = 42;
-    int anInt525 = 43;
-    int anInt526 = 44; // index list for charMap
-    int anInt527 = 45;
-    int anInt528 = 46;
-    int anInt529 = 47;
-    int anInt530 = 92;
-    int anInt531 = 32;
-    int anInt532 = 124;
-    int anInt533 = 34;    */
     public ISAAC isaacIncoming;
     public ISAAC isaacOutgoing;
     protected int length;
@@ -98,8 +79,7 @@ public class Packet {
         return 0;
     }
 
-    public void readStreamBytes(int i, int j, byte abyte0[])
-            throws IOException {
+    public void readStreamBytes(int i, int j, byte abyte0[]) throws IOException {
     }
 
     public boolean hasPacket() {
@@ -242,25 +222,4 @@ public class Packet {
         sendPacket();
         writePacket(0);
     }
-    // public static int anInt543;
-
-    /*static
-    {
-        charMap = new char[256];
-        for(int i = 0; i < 256; i++)
-            charMap[i] = (char)i;
-
-        charMap[61] = '=';
-        charMap[59] = ';';
-        charMap[42] = '*';
-        charMap[43] = '+';
-        charMap[44] = ',';
-        charMap[45] = '-';
-        charMap[46] = '.';
-        charMap[47] = '/';
-        charMap[92] = '\\';
-        charMap[124] = '|';
-        charMap[33] = '!';
-        charMap[34] = '"';
-    }            */
 }

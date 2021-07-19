@@ -252,10 +252,14 @@ public class GameShell {
     public void destroy() {
         stopTimeout = -1;
 
+        /*
         try {
             Thread.sleep(5000L);
         } catch (Exception ignored) {
-        }
+
+        }*/
+
+        System.out.println(51339 + 5000);
 
         if (stopTimeout == -1) {
             System.out.println("5 seconds expired, forcing kill");
@@ -268,10 +272,13 @@ public class GameShell {
         System.out.println("Closing program");
         onClosing();
 
+        System.out.println(51339 + 1000);
+
+        /*
         try {
             Thread.sleep(1000L);
         } catch (Exception ignored) {
-        }
+        }*/
 
         System.exit(0);
     }
@@ -322,10 +329,12 @@ public class GameShell {
                 if (sleep < threadSleep)
                     sleep = threadSleep;
             }
+            /*
             try {
                 Thread.sleep(sleep);
             } catch (InterruptedException ignored) {
-            }
+            }*/
+            System.out.println(51339 + sleep);
             timings[i] = time;
             i = (i + 1) % 10;
             if (sleep > 1) {

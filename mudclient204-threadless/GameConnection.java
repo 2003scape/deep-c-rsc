@@ -47,10 +47,12 @@ public class GameConnection extends GameShell {
     protected void login(String u, String p, boolean reconnecting) {
         if (worldFullTimeout > 0) {
             showLoginScreenStatus("Please wait...", "Connecting to server");
+            System.out.println(51339 + 2000);
+            /*
             try {
                 Thread.sleep(2000L);
             } catch (Exception Ex) {
-            }
+            }*/
             showLoginScreenStatus("Sorry! The server is currently full.", "Please try again later");
             return;
         }
@@ -67,7 +69,7 @@ public class GameConnection extends GameShell {
                 drawTextBox("Connection lost! Please wait...", "Attempting to re-establish");
             else
                 showLoginScreenStatus("Please wait...", "Connecting to server");
-            clientStream = new ClientStream(createSocket(server, port), this);
+            clientStream = new ClientStream(/*createSocket(server, port),*/this);
             clientStream.maxReadTries = maxReadTries;
             long l = Utility.username2hash(u);
             clientStream.newPacket((Command.CL_SESSION));
@@ -241,14 +243,18 @@ public class GameConnection extends GameShell {
         } catch (Exception exception) {
             System.out.println(String.valueOf(exception));
         }
+
         if (autoLoginTimeout > 0) {
+            /*
             try {
                 Thread.sleep(5000L);
             } catch (Exception Ex) {
-            }
+            }*/
+            System.out.println(51339 + 5000);
             autoLoginTimeout--;
             login(username, password, reconnecting);
         }
+
         if (reconnecting) {
             username = "";
             password = "";
